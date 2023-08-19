@@ -10,6 +10,7 @@ to word segmentation.
 import requests
 from collections import defaultdict
 import re
+from unicode_regexes import regex_char_patterns, regex_char_range
 
 # Operate on WordBreakProperty.txt file
 hebrew_letter_regex = re.compile("^([^\s]+)[\s]+; Hebrew_Letter ")
@@ -53,32 +54,7 @@ ideographic_scripts = set(
 )
 
 
-def regex_char_range(match):
-    r = match.split("..")
-    # Wide version
-    return "-".join(
-        [
-            (
-                "\\u{}".format(c.lower())
-                if len(c) < 5
-                else "\\U{}".format(c.lower().rjust(8, "0"))
-            )
-            for c in r
-        ]
-    )
-
-
-def get_letter_range(text, *regexes):
-    char_ranges = []
-    for line in text.split("\n"):
-        for regex in regexes:
-            m = regex.match(line)
-            if m:
-                char_ranges.append(regex_char_range(m.group(1)))
-    return char_ranges
-
-
-def get_letter_ranges_for_scripts(text, scripts, char_class_regex):
+def regex_letter_ranges_for_scripts(text, scripts, char_class_regex):
     char_ranges = []
     for char_range, script, char_class in script_regex.findall(text):
         if script.lower() in scripts and char_class_regex.match(char_class):
@@ -86,7 +62,7 @@ def get_letter_ranges_for_scripts(text, scripts, char_class_regex):
     return char_ranges
 
 
-def get_char_class(text, char_class_regex):
+def regex_script_char_class(text, char_class_regex):
     char_ranges = []
     for char_range, script, char_class in script_regex.findall(text):
         if char_class_regex.match(char_class):
@@ -132,7 +108,7 @@ def main():
 
     if response.ok:
         for name, reg in name_funcs:
-            s = get_letter_range(response.text, reg)
+            s = regex_char_patterns(response.text, reg)
             print(f"{name} = [{''.join(s)}];")
 
     response = requests.get(HANGUL_SYLLABLE_TYPES_URL)
@@ -144,12 +120,12 @@ def main():
 
     response = requests.get(SCRIPTS_URL)
     if response.ok:
-        s = "".join(get_char_class(response.text, numbers_regex))
+        s = "".join(regex_script_char_class(response.text, numbers_regex))
 
         print("{} = [{}];".format(IDEOGRAPHIC_NUMERIC_CHARS, "".join(s)))
 
         s = "".join(
-            get_letter_ranges_for_scripts(
+            regex_letter_ranges_for_scripts(
                 response.text, ideographic_scripts, letters_regex
             )
         )
