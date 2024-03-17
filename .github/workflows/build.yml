@@ -2,12 +2,12 @@ name: Check for updates
 on:
   schedule:
     - cron: "27 5 * * *"
-permissions:
-  contents: write
     
 jobs:
   word_breaks:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     # Map a step output to a job output
     steps:
         # Make sure we have some code to diff.
@@ -33,3 +33,13 @@ jobs:
             git push
             git push --tags
           fi;
+
+  keepalive:
+    name: Keepalive
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gautamkrishnar/keepalive-workflow@v2
+        
